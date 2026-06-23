@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Callback — Celsius Refrigeration</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --teal: #1D9E75; --teal-dark: #0F6E56; --teal-light: #E1F5EE; --teal-mid: #9FE1CB;
+  --gray-bg: #F7F7F5; --gray-border: #E2E0D8; --gray-text: #888780;
+  --text: #1a1a18; --text-muted: #5F5E5A; --white: #FFFFFF;
+  --red: #E24B4A; --red-light: #FCEBEB;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-bg); color: var(--text); min-height: 100vh; }
+header { background: var(--white); border-bottom: 1px solid var(--gray-border); padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: var(--text); }
+.logo-icon { width: 32px; height: 32px; background: var(--teal); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.logo-icon svg { width: 18px; height: 18px; fill: none; stroke: white; stroke-width: 2; }
+.header-badge { font-size: 12px; color: var(--teal-dark); background: var(--teal-light); padding: 3px 10px; border-radius: 99px; font-weight: 500; }
+nav { background: var(--white); border-bottom: 1px solid var(--gray-border); display: flex; overflow-x: auto; }
+.nav-tab { padding: 0 1rem; height: 44px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; flex-shrink: 0; }
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+.nav-tab svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+main { max-width: 600px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.page-title { font-size: 19px; font-weight: 600; margin-bottom: 3px; }
+.page-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.25rem; }
+.upload-zone { border: 2px dashed var(--gray-border); border-radius: 14px; padding: 1.75rem 1rem; text-align: center; cursor: pointer; background: var(--white); transition: border-color 0.15s, background 0.15s; margin-bottom: 1rem; }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--teal); background: var(--teal-light); }
+.upload-icon { width: 44px; height: 44px; background: var(--teal-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; }
+.upload-icon svg { width: 22px; height: 22px; stroke: var(--teal); fill: none; stroke-width: 1.5; }
+.upload-zone h3 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.upload-zone p { font-size: 12px; color: var(--text-muted); }
+.preview-wrap { display: none; margin-bottom: 1rem; position: relative; }
+.preview-wrap img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; border: 1px solid var(--gray-border); display: block; }
+.preview-change { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: white; border: none; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+.status-bar { display: none; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 1rem; background: var(--teal-light); color: var(--teal-dark); }
+.status-bar.error { background: var(--red-light); color: var(--red); }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--teal-mid); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.card { background: var(--white); border-radius: 14px; border: 1px solid var(--gray-border); padding: 1.25rem; margin-bottom: 1rem; }
+.card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 0.875rem; }
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+.field input, .field select, .field textarea { width: 100%; padding: 9px 12px; font-size: 14px; border: 1px solid var(--gray-border); border-radius: 9px; background: var(--gray-bg); color: var(--text); font-family: inherit; outline: none; transition: border-color 0.12s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--teal); background: var(--white); }
+.field textarea { resize: vertical; min-height: 64px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-send { width: 100%; padding: 13px; background: var(--teal); color: white; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; transition: background 0.12s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-send:hover { background: var(--teal-dark); }
+.btn-send:disabled { background: var(--gray-border); color: var(--gray-text); cursor: not-allowed; }
+.btn-send svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
+.success-screen { display: none; text-align: center; padding: 2.5rem 1rem; }
+.success-icon { width: 56px; height: 56px; background: var(--teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+.success-icon svg { width: 26px; height: 26px; stroke: var(--teal); fill: none; stroke-width: 2; }
+.success-screen h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+.success-screen p { font-size: 13px; color: var(--text-muted); margin-bottom: 1.25rem; }
+.btn-new { padding: 10px 22px; background: var(--white); border: 1px solid var(--gray-border); border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text); }
+.btn-new:hover { background: var(--gray-bg); }
+.chat-container { background: var(--white); border-radius: 14px; border: 1px solid var(--gray-border); display: flex; flex-direction: column; height: 360px; margin-bottom: 1rem; overflow: hidden; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.45; }
+.msg.ai { background: var(--gray-bg); color: var(--text); border-bottom-left-radius: 4px; align-self: flex-start; }
+.msg.user { background: var(--teal); color: white; border-bottom-right-radius: 4px; align-self: flex-end; }
+.msg.ai .ai-label { color: var(--teal-dark); font-size: 11px; font-weight: 600; display: block; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+.chat-input-row { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--gray-border); background: var(--white); }
+.chat-input { flex: 1; padding: 9px 12px; font-size: 14px; border: 1px solid var(--gray-border); border-radius: 10px; background: var(--gray-bg); color: var(--text); font-family: inherit; outline: none; }
+.chat-input:focus { border-color: var(--teal); background: var(--white); }
+.btn-chat-send { padding: 9px 16px; background: var(--teal); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.btn-chat-send:hover { background: var(--teal-dark); }
+.btn-chat-send:disabled { background: var(--gray-border); cursor: not-allowed; }
+.form-embed { width: 100%; height: calc(100vh - 120px); min-height: 500px; border: none; border-radius: 14px; display: block; }
+.link-card { background: var(--white); border-radius: 14px; border: 1px solid var(--gray-border); padding: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text); transition: border-color 0.12s; }
+.link-card:hover { border-color: var(--teal); }
+.link-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--teal-light); }
+.link-icon svg { width: 22px; height: 22px; fill: none; stroke: var(--teal); stroke-width: 1.5; }
+.link-text h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.link-text p { font-size: 13px; color: var(--text-muted); }
+.link-arrow { margin-left: auto; }
+.link-arrow svg { width: 16px; height: 16px; fill: none; stroke: var(--text-muted); stroke-width: 2; }
+@media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } main { padding: 1rem 0.75rem 3rem; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L12 22M2 12L22 12M5.5 5.5L18.5 18.5M18.5 5.5L5.5 18.5"/></svg>
+    </div>
+    Celsius Refrigeration
+  </div>
+  <span class="header-badge">Callback</span>
+</header>
+
+<nav>
+  <div class="nav-tab active" onclick="switchTab('capture')" id="tab-capture">
+    <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    Capture IA
+  </div>
+  <div class="nav-tab" onclick="switchTab('chat')" id="tab-chat">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Chat IA
+  </div>
+  <div class="nav-tab" onclick="switchTab('form')" id="tab-form">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+    Formulaire
+  </div>
+  <div class="nav-tab" onclick="switchTab('sheet')" id="tab-sheet">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+    Google Sheet
+  </div>
+</nav>
+
+<main>
+
+  <!-- TAB: CAPTURE IA -->
+  <div class="tab-content active" id="content-capture">
+    <div id="mainFlow">
+      <h1 class="page-title">Nouveau callback</h1>
+      <p class="page-sub">Telecharge une capture d'ecran de la conversation client.</p>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <h3>Capture d'ecran ou photo</h3>
+        <p>Appuie pour choisir depuis ta galerie</p>
+        <input type="file" id="fileInput" accept="image/*" style="display:none" />
+      </div>
+      <div class="preview-wrap" id="previewWrap">
+        <img id="previewImg" alt="Capture" />
+        <button class="preview-change" onclick="resetUpload()">Changer</button>
+      </div>
+      <div class="status-bar" id="statusBar">
+        <div class="spinner" id="spinner"></div>
+        <span id="statusText"></span>
+      </div>
+      <div class="card" id="resultCard" style="display:none">
+        <div class="card-title">Informations extraites - verifie avant d'envoyer</div>
+        <div class="field-row">
+          <div class="field"><label>Nom du client</label><input type="text" id="f_client" placeholder="—" /></div>
+          <div class="field"><label>N job HCP</label><input type="text" id="f_job" placeholder="—" /></div>
+        </div>
+        <div class="field"><label>Adresse</label><input type="text" id="f_address" placeholder="—" /></div>
+        <div class="field">
+          <label>Type de probleme</label>
+          <select id="f_type">
+            <option value="">— Selectionner —</option>
+            <option>Electricite non branchee</option>
+            <option>Finition incomplete</option>
+            <option>Systeme non fonctionnel</option>
+            <option>Capping</option>
+            <option>Job reporte - client rappelle pour planifier</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="field"><label>Date avise</label><input type="date" id="f_date" /></div>
+        <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Resume du probleme..."></textarea></div>
+      </div>
+      <button class="btn-send" id="sendBtn" onclick="sendToSheets('f')" style="display:none">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Envoyer dans Callback Celsius
+      </button>
+      <div class="status-bar" id="sendStatusBar" style="margin-top:1rem; margin-bottom:0;">
+        <div class="spinner" id="sendSpinner"></div>
+        <span id="sendStatusText"></span>
+      </div>
+    </div>
+    <div class="success-screen" id="successScreen">
+      <div class="success-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>Ajoute avec succes</h2>
+      <p>L'entree a ete enregistree dans<br>CALLBACK CELSIUS - onglet INTERNE.</p>
+      <button class="btn-new" onclick="resetAll()">Nouveau callback</button>
+    </div>
+  </div>
+
+  <!-- TAB: CHAT IA -->
+  <div class="tab-content" id="content-chat">
+    <h1 class="page-title">Chat avec l'IA</h1>
+    <p class="page-sub">Decris le probleme en texte, l'IA l'ajoute dans le Google Sheet.</p>
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg ai"><span class="ai-label">Assistant Celsius</span>Bonjour! Decris-moi le probleme du client. Par exemple: "Client John Doe, le capping n'est pas encore fait" ou "Jo-Anna Sicotte job 12345, l'electricite n'est pas branchee".</div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" placeholder="Decris le probleme ici..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendChat();}" />
+        <button class="btn-chat-send" id="chatSendBtn" onclick="sendChat()">Envoyer</button>
+      </div>
+    </div>
+    <div class="card" id="chatResultCard" style="display:none">
+      <div class="card-title">Informations extraites - verifie avant d'envoyer</div>
+      <div class="field-row">
+        <div class="field"><label>Nom du client</label><input type="text" id="c_client" placeholder="—" /></div>
+        <div class="field"><label>N job HCP</label><input type="text" id="c_job" placeholder="—" /></div>
+      </div>
+      <div class="field"><label>Adresse</label><input type="text" id="c_address" placeholder="—" /></div>
+      <div class="field">
+        <label>Type de probleme</label>
+        <select id="c_type">
+          <option value="">— Selectionner —</option>
+          <option>Electricite non branchee</option>
+          <option>Finition incomplete</option>
+          <option>Systeme non fonctionnel</option>
+          <option>Capping</option>
+          <option>Job reporte - client rappelle pour planifier</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="field"><label>Date avise</label><input type="date" id="c_date" /></div>
+      <div class="field"><label>Notes</label><textarea id="c_notes" placeholder="—"></textarea></div>
+    </div>
+    <button class="btn-send" id="chatSendSheetBtn" onclick="sendToSheets('c')" style="display:none">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      Envoyer dans Callback Celsius
+    </button>
+    <div class="status-bar" id="chatSendStatus" style="margin-top:1rem; margin-bottom:0;">
+      <div class="spinner" id="chatSendSpinner"></div>
+      <span id="chatSendStatusText"></span>
+    </div>
+  </div>
+
+  <!-- TAB: FORMULAIRE INTERNE -->
+  <div class="tab-content" id="content-form">
+    <div id="formFlow">
+      <h1 class="page-title">Formulaire interne</h1>
+      <p class="page-sub">Saisis manuellement un nouveau callback client.</p>
+      <div class="card" style="display:block">
+        <div class="card-title">Informations du callback</div>
+        <div class="field"><label>Nom du client *</label><input type="text" id="form_client" placeholder="Ex: John Doe" /></div>
+        <div class="field"><label>N° job HCP</label><input type="text" id="form_job" placeholder="Ex: 12399" /></div>
+        <div class="field"><label>Adresse</label><input type="text" id="form_address" placeholder="Ex: 123 Rue Example, Montreal" /></div>
+        <div class="field">
+          <label>Type de probleme *</label>
+          <select id="form_type">
+            <option value="">— Selectionner —</option>
+            <option>Electricite non branchee</option>
+            <option>Finition incomplete</option>
+            <option>Systeme non fonctionnel</option>
+            <option>Capping</option>
+            <option>Job reporte - client rappelle pour planifier</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="field"><label>Date que le client nous a avise *</label><input type="date" id="form_date" /></div>
+        <div class="field"><label>Notes / details</label><textarea id="form_notes" placeholder="Decris le probleme en detail..."></textarea></div>
+      </div>
+      <button class="btn-send" onclick="submitForm()" style="display:flex">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Envoyer dans Callback Celsius
+      </button>
+      <div class="status-bar" id="formStatusBar" style="margin-top:1rem; margin-bottom:0;">
+        <div class="spinner" id="formSpinner"></div>
+        <span id="formStatusText"></span>
+      </div>
+    </div>
+    <div class="success-screen" id="formSuccess" style="display:none">
+      <div class="success-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>Ajoute avec succes</h2>
+      <p>L'entree a ete enregistree dans<br>CALLBACK CELSIUS - onglet INTERNE.</p>
+      <button class="btn-new" onclick="resetForm()">Nouveau callback</button>
+    </div>
+  </div>
+
+  <!-- TAB: GOOGLE SHEET -->
+  <div class="tab-content" id="content-sheet">
+    <h1 class="page-title">Suivi des callbacks</h1>
+    <p class="page-sub">Acces direct au Google Sheet CALLBACK CELSIUS.</p>
+    <a class="link-card" href="https://docs.google.com/spreadsheets/d/1HJAb8Mc5SxRQmfOrw_F5u7qklkIVlQBtKNmZNJE-IJY/edit" target="_blank">
+      <div class="link-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+      </div>
+      <div class="link-text">
+        <h3>CALLBACK CELSIUS</h3>
+        <p>Google Sheet - onglets INTERNE et CLIENT</p>
+      </div>
+      <div class="link-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </a>
+  </div>
+
+</main>
+
+<script>
+const WEBHOOK = 'https://script.google.com/macros/s/AKfycbw4KpYddCB1LXAsmdpgND8gEiphJ1emuP2R3WM2PAL1Q32UesTAnldK0-y2X0bzzoRXnw/exec';
+let imageBase64 = null;
+let chatHistory = [];
+
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('content-' + name).classList.add('active');
+  if (name === 'form' && !document.getElementById('form_date').value) {
+    document.getElementById('form_date').value = new Date().toISOString().split('T')[0];
+  }
+}
+
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    imageBase64 = dataUrl.split(',')[1];
+    document.getElementById('previewImg').src = dataUrl;
+    uploadZone.style.display = 'none';
+    document.getElementById('previewWrap').style.display = 'block';
+    analyzeImage();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeImage() {
+  showStatus('capture', 'Analyse de la conversation...', false);
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('sendBtn').style.display = 'none';
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const resp = await fetch('/.netlify/functions/proxy', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: [
+        { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + imageBase64 } },
+        { type: 'text', text: 'Tu es un assistant pour Celsius Refrigeration. Analyse cette capture et extrait en JSON: {"client_name":"","job_number":"","problem_type":"Electricite non branchee|Finition incomplete|Systeme non fonctionnel|Capping|Job reporte - client rappelle pour planifier|Autre","date":"' + today + '","notes":"max 150 chars","address":""}. JSON uniquement.' }
+      ]}] })
+    });
+    const data = await resp.json();
+    let parsed;
+    try { parsed = JSON.parse(data.choices[0].message.content.replace(/```json|```/g,'').trim()); }
+    catch { parsed = { client_name:'', job_number:'', problem_type:'Autre', date: today, notes:'', address:'' }; }
+    fillFields('f', parsed);
+    hideStatus('capture');
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('sendBtn').style.display = 'flex';
+  } catch(e) { showStatus('capture', "Erreur d'analyse. Reessaie.", true); }
+}
+
+function fillFields(p, d) {
+  document.getElementById(p+'_client').value = d.client_name || '';
+  document.getElementById(p+'_job').value = d.job_number || '';
+  document.getElementById(p+'_date').value = d.date || new Date().toISOString().split('T')[0];
+  document.getElementById(p+'_notes').value = d.notes || '';
+  document.getElementById(p+'_address').value = d.address || '';
+  const sel = document.getElementById(p+'_type');
+  if (d.problem_type) {
+    const opt = [...sel.options].find(o => o.value.toLowerCase().includes(d.problem_type.toLowerCase().split(' ')[0]));
+    if (opt) sel.value = opt.value;
+  }
+}
+
+async function sendToSheets(prefix) {
+  const btnId = prefix === 'f' ? 'sendBtn' : 'chatSendSheetBtn';
+  const sbId = prefix === 'f' ? 'sendStatusBar' : 'chatSendStatus';
+  const spId = prefix === 'f' ? 'sendSpinner' : 'chatSendSpinner';
+  const stId = prefix === 'f' ? 'sendStatusText' : 'chatSendStatusText';
+  document.getElementById(btnId).disabled = true;
+  document.getElementById(spId).style.display = 'block';
+  const sb = document.getElementById(sbId);
+  sb.style.display = 'flex'; sb.className = 'status-bar';
+  document.getElementById(stId).textContent = 'Envoi en cours...';
+  const payload = {
+    horodatage: new Date().toLocaleString('fr-CA'),
+    client: document.getElementById(prefix+'_client').value,
+    job_number: document.getElementById(prefix+'_job').value,
+    type: document.getElementById(prefix+'_type').value,
+    date_avise: document.getElementById(prefix+'_date').value,
+    notes: document.getElementById(prefix+'_notes').value,
+    address: document.getElementById(prefix+'_address').value,
+    status: 'UNFINISHED'
+  };
+  try {
+    await fetch(WEBHOOK, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (prefix === 'f') {
+      document.getElementById('mainFlow').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block';
+    } else {
+      document.getElementById(spId).style.display = 'none';
+      document.getElementById(stId).textContent = 'Ajoute dans CALLBACK CELSIUS!';
+      document.getElementById('chatResultCard').style.display = 'none';
+      document.getElementById(btnId).style.display = 'none';
+      addMsg('Parfait! Le callback a ete enregistre. Tu peux me decrire un autre probleme.', 'ai');
+      chatHistory = [];
+    }
+  } catch(e) {
+    sb.className = 'status-bar error';
+    document.getElementById(spId).style.display = 'none';
+    document.getElementById(stId).textContent = "Erreur d'envoi.";
+    document.getElementById(btnId).disabled = false;
+  }
+}
+
+function showStatus(tab, msg, isError) {
+  const barId = tab === 'capture' ? 'statusBar' : 'chatSendStatus';
+  const spId = tab === 'capture' ? 'spinner' : 'chatSendSpinner';
+  const stId = tab === 'capture' ? 'statusText' : 'chatSendStatusText';
+  const bar = document.getElementById(barId);
+  bar.style.display = 'flex';
+  bar.className = isError ? 'status-bar error' : 'status-bar';
+  document.getElementById(stId).textContent = msg;
+  document.getElementById(spId).style.display = isError ? 'none' : 'block';
+}
+function hideStatus(tab) { document.getElementById(tab === 'capture' ? 'statusBar' : 'chatSendStatus').style.display = 'none'; }
+
+function resetUpload() {
+  imageBase64 = null;
+  document.getElementById('previewImg').src = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  uploadZone.style.display = 'block';
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('sendBtn').style.display = 'none';
+  hideStatus('capture'); fileInput.value = '';
+}
+
+function resetAll() {
+  resetUpload();
+  document.getElementById('sendStatusBar').style.display = 'none';
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('mainFlow').style.display = 'block';
+  document.getElementById('successScreen').style.display = 'none';
+  ['f_client','f_job','f_date','f_notes','f_address'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f_type').value = '';
+}
+
+function addMsg(text, role) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if (role === 'ai') div.innerHTML = '<span class="ai-label">Assistant Celsius</span>' + text;
+  else div.textContent = text;
+  const msgs = document.getElementById('chatMessages');
+  msgs.appendChild(div);
+  msgs.scrollTop = 999999;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  document.getElementById('chatSendBtn').disabled = true;
+  addMsg(text, 'user');
+  chatHistory.push({ role: 'user', content: text });
+  const today = new Date().toISOString().split('T')[0];
+  const systemPrompt = "Tu es un assistant pour Celsius Refrigeration, entreprise de pompes a chaleur au Quebec. L'utilisateur decrit des problemes de clients. Reponds en francais de facon concise. Si tu as assez d'infos (nom client + type de probleme), inclus a la fin: ###JSON###{'client_name':'...','job_number':'...','problem_type':'Electricite non branchee|Finition incomplete|Systeme non fonctionnel|Capping|Job reporte - client rappelle pour planifier|Autre','date':'" + today + "','notes':'...','address':''}###END### Sinon pose une question pour obtenir les infos manquantes.";
+  try {
+    const resp = await fetch('/.netlify/functions/proxy', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: systemPrompt, messages: chatHistory })
+    });
+    const data = await resp.json();
+    const fullText = data.choices[0].message.content;
+    chatHistory.push({ role: 'assistant', content: fullText });
+    const jsonMatch = fullText.match(/###JSON###([\s\S]*?)###END###/);
+    const displayText = fullText.replace(/###JSON###[\s\S]*?###END###/g, '').trim();
+    addMsg(displayText, 'ai');
+    if (jsonMatch) {
+      try {
+        const raw = jsonMatch[1].trim().replace(/'/g, '"');
+        const parsed = JSON.parse(raw);
+        fillFields('c', parsed);
+        document.getElementById('chatResultCard').style.display = 'block';
+        document.getElementById('chatSendSheetBtn').style.display = 'flex';
+      } catch(e) {}
+    }
+  } catch(e) { addMsg("Erreur de connexion. Reessaie.", 'ai'); }
+  document.getElementById('chatSendBtn').disabled = false;
+}
+async function submitForm() {
+  const client = document.getElementById('form_client').value.trim();
+  const type = document.getElementById('form_type').value;
+  const date = document.getElementById('form_date').value;
+  if (!client || !type || !date) {
+    const sb = document.getElementById('formStatusBar');
+    sb.style.display = 'flex'; sb.className = 'status-bar error';
+    document.getElementById('formSpinner').style.display = 'none';
+    document.getElementById('formStatusText').textContent = 'Remplis les champs obligatoires (*)';
+    return;
+  }
+  const sb = document.getElementById('formStatusBar');
+  document.getElementById('formSpinner').style.display = 'block';
+  sb.style.display = 'flex'; sb.className = 'status-bar';
+  document.getElementById('formStatusText').textContent = 'Envoi en cours...';
+  const payload = {
+    horodatage: new Date().toLocaleString('fr-CA'),
+    client: client,
+    job_number: document.getElementById('form_job').value,
+    type: type,
+    date_avise: date,
+    notes: document.getElementById('form_notes').value,
+    address: document.getElementById('form_address').value,
+    status: 'UNFINISHED'
+  };
+  try {
+    await fetch(WEBHOOK, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    document.getElementById('formFlow').style.display = 'none';
+    document.getElementById('formSuccess').style.display = 'block';
+  } catch(e) {
+    sb.className = 'status-bar error';
+    document.getElementById('formSpinner').style.display = 'none';
+    document.getElementById('formStatusText').textContent = "Erreur d'envoi. Reessaie.";
+  }
+}
+
+function resetForm() {
+  document.getElementById('formFlow').style.display = 'block';
+  document.getElementById('formSuccess').style.display = 'none';
+  document.getElementById('formStatusBar').style.display = 'none';
+  ['form_client','form_job','form_address','form_date','form_notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('form_type').value = '';
+}
+</script>
+</body>
+</html>
