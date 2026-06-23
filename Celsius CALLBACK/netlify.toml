@@ -1,0 +1,3 @@
+[build]
+  publish = "Celsius CALLBACK"
+  functions = "Celsius CALLBACK/netlify/functions"
